@@ -1,8 +1,11 @@
 import "dotenv-safe/config";
 
 import { ActivityType, Client, Partials } from "discord.js";
+import { Configuration, OpenAIApi } from "openai";
 
-import { openai } from "./lib/openai";
+const openai = new OpenAIApi(
+	new Configuration({ apiKey: process.env.OPENAI_KEY })
+);
 
 const bot = new Client({
 	intents: ["DirectMessages", "Guilds", "GuildMessages"],
@@ -24,18 +27,34 @@ bot.on("messageCreate", async message => {
 
 	await message.channel.sendTyping();
 
-	message.reply({
-		content:
-			(
-				await openai.createCompletion({
-					model: "text-davinci-003",
-					prompt: message.guild ? message.content.slice(23) : message.content,
-					max_tokens: 4000
-				})
-			).data.choices[0].text ??
-			"Sorry, I didn't understand that. Please try again.",
-		allowedMentions: { repliedUser: false }
-	});
+	try {
+		let res = (
+			await openai.createCompletion({
+				model: "text-davinci-003",
+				prompt: message.guild ? message.content.slice(23) : message.content,
+				max_tokens: 2048
+			})
+		).data.choices[0].text;
+
+		if (!res) throw new Error("No response from OpenAI API");
+
+		message.reply({
+			content: res?.slice(0, 2000),
+			allowedMentions: { repliedUser: false }
+		});
+
+		while (res.length > 2000) {
+			res = res.slice(2000);
+			message.channel.send(res.slice(0, 2000));
+		}
+	} catch (err) {
+		message.reply({
+			content: `Error occurred while processing command: ${
+				(err as Error).message
+			}`,
+			options: { ephemeral: true }
+		});
+	}
 });
 
 bot.login(process.env.BOT_TOKEN);

@@ -1,8 +1,9 @@
 {
   "private": true,
+	"main": "dist/index.js",
   "scripts": {
     "watch": "tsc -w",
-    "dev": "nodemon dist/index.js"
+    "dev": "nodemon ."
   },
   "dependencies": {
     "@types/node": "^18.11.12",
